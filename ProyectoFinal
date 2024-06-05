@@ -1,0 +1,59 @@
+#include "variables.h"
+#include "StateMachineLib.h"
+#include "stateMachine.h"
+
+// Variable para almacenar el estado previo del botón
+int oldValueButton;
+
+/**
+ * @brief Función de configuración inicial del sistema.
+ * 
+ * Esta función se ejecuta una vez al inicio del programa. Configura la comunicación serial,
+ * inicializa la pantalla LCD, la máquina de estados, el sensor DHT y configura el pin del botón.
+ */
+void setup() {
+  Serial.begin(9600);  ///< Inicializa la comunicación serial a 9600 baudios.
+  lcd.begin(16,2);     ///< Inicializa la pantalla LCD con 16 columnas y 2 filas.
+  setupMachine();      ///< Llama a la función que configura la máquina de estados.
+  dht.begin();         ///< Inicializa el sensor DHT.
+  pinMode(buttonPin, INPUT);  ///< Configura el pin del botón como entrada.
+  input = unknow;      ///< Inicializa la variable de entrada como desconocida.
+}
+
+/**
+ * @brief Función principal del ciclo del programa.
+ * 
+ * Esta función se ejecuta repetidamente en un bucle infinito. Lee la entrada,
+ * actualiza la máquina de estados y realiza tareas adicionales según sea necesario.
+ */
+void loop() {
+  readInput();              ///< Llama a la función que lee las entradas.
+  stateMachine.Update();    ///< Actualiza la máquina de estados.
+  input = unknow;           ///< Resetea la variable de entrada a desconocida.
+  updateTask();             ///< Llama a la función que actualiza las tareas.
+}
+
+/**
+ * @brief Función para leer las entradas del sistema.
+ * 
+ * Esta función lee el estado del botón y actualiza la variable de entrada
+ * según el estado actual del botón.
+ */
+void readInput(){
+  Input actualInput = (input != unknow) ? input : unknow;  ///< Asigna el valor actual de la entrada o desconocido si no hay una entrada previa.
+  int valueButton = digitalRead(buttonPin);  ///< Lee el estado del botón.
+  
+  // Verifica si el estado del botón ha cambiado
+  if(valueButton != oldValueButton){
+    oldValueButton = valueButton;  ///< Actualiza el estado previo del botón.
+    
+    // Si el botón está presionado
+    if(valueButton == HIGH){
+      actualInput = button;  ///< Establece la entrada actual como botón.
+      Serial.println("Se ha presionado el boton");  ///< Imprime un mensaje en el monitor serial.
+    }
+    delay(9);  ///< Pequeña demora para evitar rebotes.
+  }
+  
+  input = actualInput;  ///< Actualiza la variable global de entrada.
+}
