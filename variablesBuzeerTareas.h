@@ -297,7 +297,7 @@ void loopS() {
         intentoActual[i] = '*';
       taskStopLoop.Start();
 
-      if (tries == 2) {
+      if (tries >= 2) {
         taskSysBlock.Start();
         return;
       }
