@@ -1,33 +1,64 @@
+/**
+ * @file StateMachine.h
+ * @brief Declaración e implementación de la máquina de estados para el sistema.
+ */
+
 #ifndef STATEMACHINE_H
 #define STATEMACHINE_H
+
 #include "monitores.h"
-#include "menuconfig.h"
-#include "Buzzer.h"
-#include "security.h"
-
-// Declaración de funciones para manejar las acciones de la máquina de estados.
-void runSysBlock();
-void runConfig();
-void runMonitorAmbiental();
-void runMonitorEvents();
-void runAlarm();
-
-void leavingMonitorAmbiental();
-void leavingMonitorEvents();
-void leavingConfig();
+#include "menu.h"
+#include "variablesBuzzerTareas.h"
 
 /**
- * @brief Configura la máquina de estados, definiendo transiciones y acciones.
- *
- * Esta función configura las transiciones entre estados y las acciones que se
- * ejecutarán al entrar o salir de cada estado. También establece el estado inicial.
+ * @brief Ejecuta el bloqueo del sistema.
  */
-void setupMachine(){
-  stateMachine.AddTransition(start, config, []() {return input == correctPassword;});
-  stateMachine.AddTransition(start, block, []() {return input == sysBlock;});
-  
+void runSysBlock();
+
+/**
+ * @brief Ejecuta la configuración del sistema.
+ */
+void runConfig();
+
+/**
+ * @brief Ejecuta la monitorización ambiental.
+ */
+void runMonitorAmbiental();
+
+/**
+ * @brief Ejecuta la monitorización de eventos.
+ */
+void runMonitorEvents();
+
+/**
+ * @brief Ejecuta la alarma.
+ */
+void runAlarm();
+
+/**
+ * @brief Finaliza la monitorización ambiental.
+ */
+void exitMonitorAmbiental();
+
+/**
+ * @brief Finaliza la monitorización de eventos.
+ */
+void exitMonitorEvents();
+
+/**
+ * @brief Finaliza la configuración.
+ */
+void exitConfig();
+
+/**
+ * @brief Configura la máquina de estados, añadiendo transiciones y configuraciones de entrada/salida.
+ */
+void setupMachine() {
+  stateMachine.AddTransition(inicio, config, []() {return input == correctPassword;});
+  stateMachine.AddTransition(inicio, bloqueo, []() {return input == sysBlock;});
+
   stateMachine.AddTransition(config, monitorAmbiental, []() {return input == button;});
-  
+
   stateMachine.AddTransition(monitorAmbiental, alarm, []() {return input == tempHigh;});
   stateMachine.AddTransition(monitorAmbiental, alarm, []() {return input == lightHigh;});
   stateMachine.AddTransition(monitorAmbiental, monitorEvents, []() {return input == timeOut7;});
@@ -37,32 +68,30 @@ void setupMachine(){
   stateMachine.AddTransition(monitorEvents, config, []() {return input == button;});
   stateMachine.AddTransition(monitorEvents, monitorAmbiental, []() {return input == timeOut3;});
 
-  stateMachine.AddTransition(alarm, start, []() {return input == button;});
+  stateMachine.AddTransition(alarm, inicio, []() {return input == button;});
   stateMachine.AddTransition(alarm, monitorAmbiental, []() {return input == timeOut4;});
 
-  stateMachine.AddTransition(block, start, []() {return input == timeOut10;});
+  stateMachine.AddTransition(bloqueo, inicio, []() {return input == timeOut10;});
 
-  stateMachine.SetOnEntering(start, seguridad);
-  stateMachine.SetOnEntering(block, runSysBlock);
+  stateMachine.SetOnEntering(inicio, seguridad);
+  stateMachine.SetOnEntering(bloqueo, runSysBlock);
   stateMachine.SetOnEntering(config, startLiquidMenu);
   stateMachine.SetOnEntering(monitorAmbiental, runMonitorAmbiental);
   stateMachine.SetOnEntering(monitorEvents, runMonitorEvents);
   stateMachine.SetOnEntering(alarm, runAlarm);
 
-  stateMachine.SetOnLeaving(monitorAmbiental, leavingMonitorAmbiental);
-  stateMachine.SetOnLeaving(monitorEvents, leavingMonitorEvents);
-  stateMachine.SetOnLeaving(config, leavingConfig);
-  // Se configura estado inicial
-  stateMachine.SetState(start, false, true);
+  stateMachine.SetOnLeaving(monitorAmbiental, exitMonitorAmbiental);
+  stateMachine.SetOnLeaving(monitorEvents, exitMonitorEvents);
+  stateMachine.SetOnLeaving(config, exitConfig);
+
+  // Configura el estado inicial
+  stateMachine.SetState(inicio, false, true);
 }
 
 /**
- * @brief Maneja el estado de bloqueo del sistema.
- *
- * Esta función se ejecuta cuando el sistema entra en el estado de bloqueo.
- * Muestra un mensaje en el LCD, enciende el LED rojo y reproduce una melodía de bloqueo.
+ * @brief Función que se ejecuta cuando el sistema está bloqueado.
  */
-void runSysBlock(){
+void runSysBlock() {
   taskLoop.Stop();
   lcd.setCursor(0, 0);
   lcd.print("Sistema bloqueado");
@@ -80,96 +109,59 @@ void runSysBlock(){
 }
 
 /**
- * @brief Maneja el estado de configuración.
- *
- * Esta función se ejecuta cuando el sistema entra en el estado de configuración.
- * Muestra un mensaje de configuración en el LCD.
+ * @brief Función que se ejecuta para la configuración del sistema.
  */
-void runConfig(){
+void runConfig() {
   lcd.clear();
   lcd.print("> Config");
 }
 
 /**
- * @brief Maneja el estado de monitoreo ambiental.
- *
- * Esta función se ejecuta cuando el sistema entra en el estado de monitoreo ambiental.
- * Limpia el LCD, inicia las tareas de monitoreo ambiental y configura un tiempo de espera.
+ * @brief Función que se ejecuta para la monitorización ambiental.
  */
-void runMonitorAmbiental(){
+void runMonitorAmbiental() {
   lcd.clear();
   taskLoopMonitorAmbiental.Start();
   taskTimeOut7.Start();
 }
 
 /**
- * @brief Maneja el estado de monitoreo de eventos.
- *
- * Esta función se ejecuta cuando el sistema entra en el estado de monitoreo de eventos.
- * Limpia el LCD, inicia las tareas de monitoreo de eventos y configura un tiempo de espera.
+ * @brief Función que se ejecuta para la monitorización de eventos.
  */
-void runMonitorEvents(){
+void runMonitorEvents() {
   lcd.clear();
   taskLoopMonitorHall.Start();
   taskTimeOut3.Start();
 }
 
 /**
- * @brief Maneja el estado de alarma.
- *
- * Esta función se ejecuta cuando el sistema entra en el estado de alarma.
- * Muestra un mensaje de alarma en el LCD, enciende el LED azul y reproduce una melodía de alarma.
+ * @brief Función que se ejecuta cuando se activa la alarma.
  */
-void runAlarm(){
+void runAlarm() {
   lcd.clear();
-  lcd.print("> Alarm");
-  digitalWrite(ledB, HIGH);
-  playMelody(buzzerAlarm, 2);
-  digitalWrite(ledB, LOW);
-  delay(200);
-  digitalWrite(ledB, HIGH);
-  playMelody(buzzerAlarm, 2);
-  digitalWrite(ledB, LOW);
-  delay(200);
-  digitalWrite(ledB, HIGH);
-  playMelody(buzzerAlarm, 2);
-  digitalWrite(ledB, LOW);
-  delay(200);
-  digitalWrite(ledB, HIGH);
-  playMelody(buzzerAlarm, 2);
-  digitalWrite(ledB, LOW);
-  delay(200);
+  taskAlarma.Start();
   taskTimeOut4.Start();
 }
 
 /**
- * @brief Acción de salida del estado de monitoreo ambiental.
- *
- * Esta función se ejecuta cuando el sistema sale del estado de monitoreo ambiental.
- * Detiene la tarea de monitoreo ambiental y muestra un mensaje en el serial.
+ * @brief Función que se ejecuta al salir del estado de monitorización ambiental.
  */
-void leavingMonitorAmbiental(){
+void exitMonitorAmbiental() {
   taskLoopMonitorAmbiental.Stop();
   Serial.println("Saliendo del estado Monitor Ambiental");
 }
 
 /**
- * @brief Acción de salida del estado de monitoreo de eventos.
- *
- * Esta función se ejecuta cuando el sistema sale del estado de monitoreo de eventos.
- * Detiene la tarea de monitoreo de eventos.
+ * @brief Función que se ejecuta al salir del estado de monitorización de eventos.
  */
-void leavingMonitorEvents(){
+void exitMonitorEvents() {
   taskLoopMonitorHall.Stop();
 }
 
 /**
- * @brief Acción de salida del estado de configuración.
- *
- * Esta función se ejecuta cuando el sistema sale del estado de configuración.
- * Detiene la tarea de configuración del menú.
+ * @brief Función que se ejecuta al salir del estado de configuración.
  */
-void leavingConfig(){
+void exitConfig() {
   taskLoopMenu.Stop();
 }
 
