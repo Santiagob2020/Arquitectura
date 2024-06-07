@@ -1,0 +1,176 @@
+/**
+ * @file menu.h
+ * @brief Declaración e implementación del menú de configuración usando la biblioteca LiquidMenu.
+ */
+
+#ifndef MENU_H
+#define MENU_H
+
+#include "variablesBuzzerTareas.h"
+#include <LiquidMenu.h>
+
+/// Línea del menú para la temperatura máxima.
+LiquidLine line1(0, 1, "TEMP_HIGH: ", maxTemp);
+/// Línea del menú para la temperatura mínima.
+LiquidLine line2(0, 1, "TEMP_LOW: ", minTemp);
+/// Línea del menú para la luz máxima.
+LiquidLine line3(0, 1, "LUZ_HIGH: ", maxLight);
+/// Línea del menú para la luz mínima.
+LiquidLine line4(0, 1, "LUZ_LOW: ", minLight);
+/// Línea del menú para el valor máximo del sensor Hall.
+LiquidLine line5(0, 1, "HALL: ", maxHall);
+/// Línea del menú para resetear los valores.
+LiquidLine line6(0, 1, "RESET");
+
+/// Pantalla del menú.
+LiquidScreen screen;
+/// Menú principal.
+LiquidMenu menu(lcd);
+
+/**
+ * @brief Función vacía usada para hacer las líneas enfocables.
+ */
+void blankFunction() {
+    return;
+}
+
+/**
+ * @brief Incrementa los valores de las variables basadas en la línea actual del menú.
+ * @param actualLine Línea actual seleccionada en el menú.
+ */
+void upValue(int actualLine);
+
+/**
+ * @brief Decrementa los valores de las variables basadas en la línea actual del menú.
+ * @param actualLine Línea actual seleccionada en el menú.
+ */
+void downValue(int actualLine);
+
+/**
+ * @brief Configura e inicia el menú LiquidMenu.
+ */
+void startLiquidMenu() {
+  screen.add_line(line1);
+  screen.add_line(line2);
+  screen.add_line(line3);
+  screen.add_line(line4);
+  screen.add_line(line5);
+  screen.add_line(line6);
+
+  line1.attach_function(1, blankFunction);
+  line2.attach_function(1, blankFunction);
+  line3.attach_function(1, blankFunction);
+  line4.attach_function(1, blankFunction);
+  line5.attach_function(1, blankFunction);
+  line6.attach_function(1, blankFunction);
+
+  screen.set_displayLineCount(2);
+  line1.set_decimalPlaces(2);
+
+  menu.add_screen(screen);
+  menu.update();
+  menu.switch_focus();
+
+  taskLoopMenu.Start();
+}
+
+/**
+ * @brief Bucle principal del menú LiquidMenu que maneja la entrada del teclado y actualiza el menú.
+ */
+void loopLiquidMenu() {
+  char key = keypad.getKey();
+
+  menu.update();
+  if (!key)
+    return;
+
+  int actualLine = menu.get_focusedLine();
+
+  switch (key) {
+    case 'A':
+      upValue(actualLine);
+      break;
+    case 'B':
+      downValue(actualLine);
+      break;
+    case 'D':
+      menu.switch_focus();
+      if (actualLine == 5)
+        menu.switch_focus();
+      break;
+    default:
+      Serial.println(actualLine);
+      break;
+  }
+}
+
+/**
+ * @brief Resetea los valores de las variables a sus valores predeterminados.
+ */
+void reset() {
+  maxTemp = 40;
+  minTemp = 0;
+  maxLight = 300;
+  minLight = 0;
+  maxHall = 1000;  
+}
+
+/**
+ * @brief Incrementa los valores de las variables basadas en la línea actual del menú.
+ * @param actualLine Línea actual seleccionada en el menú.
+ */
+void upValue(int actualLine) {
+  switch (actualLine) {
+    case 0:
+      maxTemp += 2;
+      break;
+    case 1:
+      if (minTemp + 2 < maxTemp)
+        minTemp += 2;
+      break;
+    case 2:
+      maxLight += 20;
+      break;
+    case 3:
+      if (minLight + 20 < maxLight)
+        minLight += 20;
+      break;
+    case 4:
+      maxHall += 50;
+      break;
+    case 5:
+      reset();
+      break;
+  }
+}
+
+/**
+ * @brief Decrementa los valores de las variables basadas en la línea actual del menú.
+ * @param actualLine Línea actual seleccionada en el menú.
+ */
+void downValue(int actualLine) {
+  switch (actualLine) {
+    case 0:
+      if (maxTemp - 2 > minTemp)
+        maxTemp -= 2;
+      break;
+    case 1:
+      minTemp -= 2;
+      break;
+    case 2:
+      if (maxLight - 20 > minLight)
+        maxLight -= 20;
+      break;
+    case 3:
+      minLight -= 20;
+      break;
+    case 4:
+      maxHall -= 50;
+      break;
+    case 5:
+      reset();
+      break;
+  }
+}
+
+#endif // MENU_H
